@@ -25,25 +25,25 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
                     a = 1,
                     b = 1,
                     seed=2000, 
-                    numIter=100){
+                    numIter=100,
+                    thin=1){
   
   q <- B^2*p
   k_lambda1sq <- nu1/2+1
   k_lambda2 <- nu2/2+1/2
   nu_Lambda <- (TT-p)*N*J + nu + 2*B*p
-  HI <- lapply(H, function(x){kronecker(t(x), diag(1, B))})
   
   
   
   # store values
-  sim.M_w <- sim.Ssq_w <- vector(mode="list", length=numIter+1)
-  sim.M_v <- sim.Ssq_v <- vector(mode="list", length=numIter+1)
-  sim.M_u <- sim.Ssq_u <- vector(mode="list", length=numIter+1)
-  sim.M_U_v <- sim.M_U_u <- sim.M_alpha <- sim.M_beta <- vector(mode="list", length=numIter+1)
-  sim.Ssq_alpha <- sim.Ssq_beta <- vector(mode="list", length=numIter+1)
-  sim.S_Lambda <- sim.mu_lambda1sq <- sim.mu_lambda2 <- vector(mode="list", length=numIter+1)
-  sim.mu_2tausqinv <- sim.lambda_2tausqinv <- vector(mode="list", length=numIter+1)
-  sim.M_v_star <- sim.M_u_star <- sim.omega_u <- sim.omega_v  <- vector(mode="list", length=numIter+1)
+  sim.M_w <- sim.Ssq_w <- vector(mode="list", length=numIter/thin+1)
+  sim.M_v <- sim.Ssq_v <- vector(mode="list", length=numIter/thin+1)
+  sim.M_u <- sim.Ssq_u <- vector(mode="list", length=numIter/thin+1)
+  sim.M_U_v <- sim.M_U_u <- sim.M_alpha <- sim.M_beta <- vector(mode="list", length=numIter/thin+1)
+  sim.Ssq_alpha <- sim.Ssq_beta <- vector(mode="list", length=numIter/thin+1)
+  sim.S_Lambda <- sim.mu_lambda1sq <- sim.mu_lambda2 <- vector(mode="list", length=numIter/thin+1)
+  sim.mu_2tausqinv <- sim.lambda_2tausqinv <- vector(mode="list", length=numIter/thin+1)
+  sim.M_v_star <- sim.M_u_star <- sim.omega_u <- sim.omega_v  <- vector(mode="list", length=numIter/thin+1)
   
   
   set.seed(seed)
@@ -124,7 +124,7 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
     M_U_v <- (N/2+k1)/(0.5*Reduce("+", lapply(1:N, function(n){diag(Ssq_v[[n]])+M_v[[n]]^2}))+1/theta1)
     M_U_u <- (J/2+k2)/(0.5*Reduce("+", lapply(1:J, function(j){diag(Ssq_u[[j]])+M_u[[j]]^2}))+1/theta2)
     
-    ES_nj <- ES_nj_recover(N, J, B, TT, p, M_w, M_v, M_u, M_alpha, M_beta, eta0, H, HI, Ssq_w, Ssq_v, Ssq_u, Ssq_alpha, Ssq_beta)
+    ES_nj <- ES_nj_recover(N, J, B, TT, p, M_w, M_v, M_u, M_alpha, M_beta, eta0, H, Ssq_w, Ssq_v, Ssq_u, Ssq_alpha, Ssq_beta)
     #S_Lambda <- chol2inv(chol(Reduce("+", ES_nj) + K_inv + 2*tcrossprod(matrix(G, nrow=B))))
     #mu_lambda1sq <- (nu1+2)*mu1/(nu1+mu1/xisq/mu_2tausqinv)
     #mu_2tausqinv <- sqrt(mu_lambda1sq/(diag(Ssq_w)+M_w^2)/xisq)
@@ -140,27 +140,29 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
     
     
     # store  sims
-    sim.Ssq_w[[i+1]] <- Ssq_w 
-    sim.M_w[[i+1]] <- M_w 
-    sim.Ssq_v[[i+1]] <- Ssq_v 
-    sim.M_v[[i+1]] <- M_v 
-    sim.Ssq_u[[i+1]] <- Ssq_u 
-    sim.M_u[[i+1]] <- M_u 
-    sim.M_U_v[[i+1]] <- M_U_v 
-    sim.M_U_u[[i+1]] <- M_U_u 
-    sim.M_alpha[[i+1]] <- M_alpha 
-    sim.M_beta[[i+1]] <- M_beta 
-    sim.Ssq_alpha[[i+1]] <- Ssq_alpha 
-    sim.Ssq_beta[[i+1]] <- Ssq_beta 
-    sim.S_Lambda[[i+1]] <- S_Lambda 
-    sim.mu_lambda1sq[[i+1]] <- mu_lambda1sq 
-    sim.mu_lambda2[[i+1]] <- mu_lambda2 
-    sim.mu_2tausqinv[[i+1]] <- mu_2tausqinv 
-    sim.lambda_2tausqinv[[i+1]] <- lambda_2tausqinv 
-    sim.M_v_star[[i+1]] <- lapply(1:N, function(n){M_alpha*M_v[[n]]})
-    sim.M_u_star[[i+1]] <- lapply(1:J, function(j){M_beta*M_u[[j]]})
-    sim.omega_u[[i+1]] <- M_U_v / (M_alpha^2)
-    sim.omega_v[[i+1]] <- M_U_u / (M_beta^2)  
+    if(i %% thin == 0){  
+      sim.Ssq_w[[i/thin+1]] <- Ssq_w 
+      sim.M_w[[i/thin+1]] <- M_w 
+      sim.Ssq_v[[i/thin+1]] <- Ssq_v 
+      sim.M_v[[i/thin+1]] <- M_v 
+      sim.Ssq_u[[i/thin+1]] <- Ssq_u 
+      sim.M_u[[i/thin+1]] <- M_u 
+      sim.M_U_v[[i/thin+1]] <- M_U_v 
+      sim.M_U_u[[i/thin+1]] <- M_U_u 
+      sim.M_alpha[[i/thin+1]] <- M_alpha 
+      sim.M_beta[[i/thin+1]] <- M_beta 
+      sim.Ssq_alpha[[i/thin+1]] <- Ssq_alpha 
+      sim.Ssq_beta[[i/thin+1]] <- Ssq_beta 
+      sim.S_Lambda[[i/thin+1]] <- S_Lambda 
+      sim.mu_lambda1sq[[i/thin+1]] <- mu_lambda1sq 
+      sim.mu_lambda2[[i/thin+1]] <- mu_lambda2 
+      sim.mu_2tausqinv[[i/thin+1]] <- mu_2tausqinv 
+      sim.lambda_2tausqinv[[i/thin+1]] <- lambda_2tausqinv 
+      sim.M_v_star[[i/thin+1]] <- lapply(1:N, function(n){M_alpha*M_v[[n]]})
+      sim.M_u_star[[i/thin+1]] <- lapply(1:J, function(j){M_beta*M_u[[j]]})
+      sim.omega_u[[i/thin+1]] <- M_U_v / (M_alpha^2)
+      sim.omega_v[[i/thin+1]] <- M_U_u / (M_beta^2)  
+    }
     
     # report iter
     cat("i=", i, "\n", sep="")
@@ -170,7 +172,7 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
   
   
   return(list(
-    sim.Ssq_w= sim.Ssq_w,
+    sim.Ssq_w = sim.Ssq_w,
     sim.M_w = sim.M_w,
     sim.Ssq_v =sim.Ssq_v,
     sim.M_v = sim.M_v,
@@ -190,7 +192,33 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
     sim.M_v_star=sim.M_v_star,
     sim.M_u_star=sim.M_u_star,
     sim.omega_u=sim.omega_u,
-    sim.omega_v=sim.omega_v))
+    sim.omega_v=sim.omega_v,
+    
+    res = list(                    # final value
+      Ssq_w = Ssq_w,
+      M_w  = M_w, 
+      Ssq_v = Ssq_v, 
+      M_v = M_v, 
+      Ssq_u = Ssq_u, 
+      M_u = M_u, 
+      M_U_v = M_U_v, 
+      M_U_u = M_U_u, 
+      M_alpha = M_alpha, 
+      M_beta = M_beta, 
+      Ssq_alpha = Ssq_alpha, 
+      Ssq_beta = Ssq_beta, 
+      S_Lambda = S_Lambda, 
+      mu_lambda1sq  = mu_lambda1sq, 
+      mu_lambda2 = mu_lambda2, 
+      mu_2tausqinv = mu_2tausqinv, 
+      lambda_2tausqinv = lambda_2tausqinv, 
+      M_v_star = lapply(1:N, function(n){M_alpha*M_v[[n]]}),
+      M_u_star = lapply(1:J, function(j){M_beta*M_u[[j]]}),
+      omega_u = M_U_v / (M_alpha^2),
+      omega_v = M_U_u / (M_beta^2)  
+    )
+    
+    ))
   
 }
 
@@ -204,7 +232,7 @@ MSMS_VB <- function(H, HH, eta0, w_MLE,
 
 
 
-ES_nj_recover <- function(N, J, B, TT, p, M_w, M_v, M_u, M_alpha, M_beta, eta0, H, HI, Ssq_w, Ssq_v, Ssq_u, Ssq_alpha, Ssq_beta){
+ES_nj_recover <- function(N, J, B, TT, p, M_w, M_v, M_u, M_alpha, M_beta, eta0, H, Ssq_w, Ssq_v, Ssq_u, Ssq_alpha, Ssq_beta){
   lapply(1:(J*N), function(x){
     n <- ceiling(x/J)
     j <- ifelse(x%%J, x%%J, J)
@@ -212,8 +240,8 @@ ES_nj_recover <- function(N, J, B, TT, p, M_w, M_v, M_u, M_alpha, M_beta, eta0, 
     VW <- Ssq_w + (Ssq_alpha + tcrossprod(M_alpha)) * (Ssq_v[[n]] + tcrossprod(M_v[[n]])) - tcrossprod(M_alpha*M_v[[n]])
                 + (Ssq_beta + tcrossprod(M_beta)) * (Ssq_u[[j]] + tcrossprod(M_u[[j]])) - tcrossprod(M_beta*M_u[[j]]) 
     # if(min(eigen(VW)$value) <= 0) VW <- VW + diag(abs(min(eigen(VW)$value))+0.001, B^2*p)
-    Sbig <- tcrossprod(HI[[x]] %*% t(chol((VW))))
-    S <- tcrossprod(eta0[[x]] - EW%*%H[[x]]) + Reduce("+", lapply(1:(TT-p), function(i){Sbig[((i-1)*B+1):(i*B),((i-1)*B+1):(i*B)]}))
+    S <- tcrossprod(eta0[[x]] - EW%*%H[[x]])  
+    + Reduce("+", mapply(function(k, l){sum(H[[x]][k,]*H[[x]][l,])*VW[((k-1)*B+1):(k*B), ((l-1)*B+1):(l*B)]}, rep(1:(B*p), B*p), sort(rep(1:(B*p), B*p)), SIMPLIFY = FALSE))
     S
   })
 }
@@ -260,4 +288,56 @@ EQQ_Exisq_recover <- function(mu_2tausqinv, lambda_2tausqinv, mu_lambda1sq, k_la
   EQQ <- tcrossprod(matrix(rowMeans(G_mat), B)) + Reduce("+", lapply(1:(B*p), function(i){Ssq_G[((i-1)*B+1):(i*B), ((i-1)*B+1):(i*B)]}))
   return(list(EQQ=EQQ, Exisq=rowMeans(xisq_mat)))
 }
+
+
+
+
+
+
+# make data
+makedata <- function(path, pattern="*.txt", TT, B, p, N, J, standardize=TRUE){
+  temp <- list.files(path=path,  pattern=pattern) 
+  eta <- eta.sd <- vector("list", N*J)
+  
+  for(n in 1:N){
+    eta.temp <- as.matrix(read.table(paste(path, "\\", temp[n], sep=""), header=FALSE))
+    
+    if(standardize){
+      
+      eta.sd[[(n-1)*J+1]] <- sd1 <- apply(eta.temp[1:TT,], 2, sd)
+      eta.sd[[(n-1)*J+2]] <- sd2 <- apply(eta.temp[(TT+1):(2*TT),], 2, sd)
+      eta.sd[[(n-1)*J+3]] <- sd3 <- apply(eta.temp[(2*TT+1):(3*TT),], 2, sd)
+      eta.sd[[(n-1)*J+4]] <- sd4 <- apply(eta.temp[(3*TT+1):(4*TT),], 2, sd)
+      
+      
+      eta[[(n-1)*J+1]] <- t(t(eta.temp[1:TT,])/sd1)
+      eta[[(n-1)*J+2]] <- t(t(eta.temp[(TT+1):(2*TT),])/sd2)
+      eta[[(n-1)*J+3]] <- t(t(eta.temp[(2*TT+1):(3*TT),])/sd3)
+      eta[[(n-1)*J+4]] <- t(t(eta.temp[(3*TT+1):(4*TT),])/sd4)
+      
+      
+    } else {
+      eta[[(n-1)*J+1]] <- eta.temp[1:TT,]
+      eta[[(n-1)*J+2]] <- eta.temp[(TT+1):(2*TT),]
+      eta[[(n-1)*J+3]] <- eta.temp[(2*TT+1):(3*TT),]
+      eta[[(n-1)*J+4]] <- eta.temp[(3*TT+1):(4*TT),]
+    }
+    
+    
+    cat("n=", n, "\n")
+  }
+  H <- lapply(eta, function(x){H <- NULL; for(i in 1:(TT-p)){H <- cbind(H, c(t(x[(i+p-1):i,])))}; H})
+  eta0 <- lapply(eta, function(x){t(x[(p+1):TT,])})
+  HH <- lapply(H, tcrossprod)
+  w_MLE <- lapply(1:(J*N), function(x){c(eta0[[x]] %*% t(H[[x]]) %*% chol2inv(chol(HH[[x]])))})
+  return(list(eta=eta,
+              H=H,
+              eta0=eta0,
+              HH=HH,
+              w_MLE=w_MLE,
+              eta.sd=eta.sd))
+}
+# save.image("HCP_all_p2.RData")
+
+
 
